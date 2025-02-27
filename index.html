@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Codes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            display: flex;
+            gap: 120px;
+            padding: 40px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .qr-box {
+            text-align: center;
+        }
+
+        .qr-box img {
+            width: 300px;
+            height: 300px;
+            border-radius: 10px;
+        }
+
+        .qr-box p {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="qr-box">
+            <img src="./arxiv.png" alt="Arxiv:2408.01439">
+            <p>Arxiv:2408.01439</p>
+        </div>
+        <div class="qr-box">
+            <img src="./QSVT101.png" alt="QSVT 101">
+            <p>QSVT 101</p>
+        </div>
+    </div>
+
+</body>
+</html>
