@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Codes</title>
+    <title>QR Code</title>
+    <script src="qrcode.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -13,52 +14,309 @@
         }
 
         body {
+            min-height: 100vh;
+            background-color: #f4f4f4;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            background-color: #f4f4f4;
+            padding: 20px;
         }
 
         .container {
             display: flex;
-            gap: 120px;
-            padding: 40px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 80vh;
         }
 
         .qr-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             text-align: center;
+            transition: transform 0.2s;
+            width: 300px;
+            flex-shrink: 0;
         }
 
-        .qr-box img {
-            width: 300px;
-            height: 300px;
-            border-radius: 10px;
+        .qr-box .qr-container {
+            width: 200px;
+            height: 200px;
+            margin: 10px auto;
+            display: block;
         }
 
         .qr-box p {
-            margin-top: 20px;
-            font-size: 20px;
+            margin-top: 15px;
+            font-size: 18px;
             font-weight: bold;
             color: #333;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            user-select: none;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            text-align: center;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+        }
+
+        .button-group button {
+            flex: 1;
+            margin: 0 5px;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .replace-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .replace-btn:hover {
+            background-color: #0b7dda;
+        }
+
+        .add-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .add-btn:hover {
+            background-color: #45a049;
+        }
+
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        .delete-btn.disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
+    <div class="container" id="qrContainer"></div>
 
-    <div class="container">
-        <div class="qr-box">
-            <img src="./arxiv.png" alt="Arxiv:2408.01439">
-            <p>Arxiv:2408.01439</p>
-        </div>
-        <div class="qr-box">
-            <img src="./QSVT101.png" alt="QSVT 101">
-            <p>QSVT 101</p>
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content">
+            <h3>Edit QR Code</h3>
+            <div class="form-group">
+                <label for="qrMessage">Message:</label>
+                <input type="text" id="qrMessage" placeholder="Enter QR code message">
+            </div>
+            <div class="form-group">
+                <label for="qrCaption">Caption:</label>
+                <input type="text" id="qrCaption" placeholder="Enter caption">
+            </div>
+            <div class="button-group">
+                <button class="replace-btn" id="replaceBtn">Replace</button>
+                <button class="add-btn" id="addBtn">Add</button>
+                <button class="delete-btn" id="deleteBtn">Delete</button>
+            </div>
         </div>
     </div>
 
+    <script>
+        let qrCodes = [];
+        let currentEditIndex = -1;
+
+        function loadQRCodes() {
+            const savedCodes = localStorage.getItem('qrCodes');
+            qrCodes = savedCodes ? JSON.parse(savedCodes) : [];
+            
+            if (qrCodes.length === 0) {
+                qrCodes.push({ 
+                    caption: 'Github Repo', 
+                    message: 'https://github.com/helloluxi/qrcode' 
+                });
+            }
+            
+            renderQRCodes();
+        }
+
+        function saveQRCodes() {
+            localStorage.setItem('qrCodes', JSON.stringify(qrCodes));
+        }
+
+        function createQRCode(container, message) {
+            container.innerHTML = '';
+            
+            if (message && message.trim() !== '') {
+                new QRCode(container, {
+                    text: message,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            }
+        }
+
+        function renderQRCodes() {
+            const container = document.getElementById('qrContainer');
+            container.innerHTML = '';
+
+            qrCodes.forEach((code, index) => {
+                const qrBox = document.createElement('div');
+                qrBox.className = 'qr-box';
+                qrBox.innerHTML = `
+                    <div class="qr-container" id="qr-${index}"></div>
+                    <p data-index="${index}">${code.caption}</p>
+                `;
+                container.appendChild(qrBox);
+                createQRCode(document.getElementById(`qr-${index}`), code.message);
+                
+                const captionElement = qrBox.querySelector('p');
+                captionElement.addEventListener('dblclick', function() {
+                    openEditModal(index);
+                });
+                
+                captionElement.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    openEditModal(index);
+                });
+            });
+        }
+
+        function openEditModal(index) {
+            currentEditIndex = index;
+            const modal = document.getElementById('editModal');
+            const messageInput = document.getElementById('qrMessage');
+            const captionInput = document.getElementById('qrCaption');
+            const deleteBtn = document.getElementById('deleteBtn');
+            
+            messageInput.value = qrCodes[index].message || '';
+            captionInput.value = qrCodes[index].caption || '';
+            
+            if (qrCodes.length <= 1) {
+                deleteBtn.classList.add('disabled');
+                deleteBtn.disabled = true;
+            } else {
+                deleteBtn.classList.remove('disabled');
+                deleteBtn.disabled = false;
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editModal');
+            modal.style.display = 'none';
+            currentEditIndex = -1;
+        }
+
+        function setupEventListeners() {
+            document.getElementById('replaceBtn').addEventListener('click', function() {
+                if (currentEditIndex >= 0) {
+                    const message = document.getElementById('qrMessage').value;
+                    const caption = document.getElementById('qrCaption').value;
+                    
+                    qrCodes[currentEditIndex] = { message, caption };
+                    saveQRCodes();
+                    renderQRCodes();
+                    closeEditModal();
+                }
+            });
+            
+            document.getElementById('addBtn').addEventListener('click', function() {
+                const message = document.getElementById('qrMessage').value;
+                const caption = document.getElementById('qrCaption').value;
+                
+                qrCodes.push({ message, caption });
+                saveQRCodes();
+                renderQRCodes();
+                closeEditModal();
+            });
+            
+            document.getElementById('deleteBtn').addEventListener('click', function() {
+                if (currentEditIndex >= 0 && qrCodes.length > 1) {
+                    qrCodes.splice(currentEditIndex, 1);
+                    saveQRCodes();
+                    renderQRCodes();
+                    closeEditModal();
+                }
+            });
+            
+            document.getElementById('editModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeEditModal();
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadQRCodes();
+            setupEventListeners();
+        });
+    </script>
 </body>
 </html>
